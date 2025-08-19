@@ -1,0 +1,79 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat with LLM</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div id="chat-container">
+        <div id="chat-history"></div>
+        <form id="chat-form">
+            <input type="text" id="message-input" placeholder="Type your message..." autocomplete="off">
+        </form>
+    </div>
+    <script>
+        const chatHistory = document.getElementById('chat-history');
+        const chatForm = document.getElementById('chat-form');
+        const messageInput = document.getElementById('message-input');
+        let messages = [];
+
+        chatForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const userInput = messageInput.value;
+            if (!userInput) return;
+
+            appendMessage('user', userInput);
+            messages.push({ role: 'user', content: userInput });
+            messageInput.value = '';
+
+            const assistantMessageDiv = appendMessage('assistant', '');
+
+            const eventSource = new EventSource("/chat", {
+                method: "POST",
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ messages })
+            });
+
+            let fullResponse = "";
+
+            eventSource.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                if (data.error) {
+                    fullResponse = data.error;
+                    assistantMessageDiv.textContent = fullResponse;
+                    eventSource.close();
+                    return;
+                }
+                if (data.message && data.message.content) {
+                    fullResponse += data.message.content;
+                    assistantMessageDiv.textContent = fullResponse;
+                }
+                if (data.done) {
+                    eventSource.close();
+                    messages.push({ role: 'assistant', content: fullResponse });
+                }
+            };
+
+            eventSource.onerror = function(err) {
+                console.error("EventSource failed:", err);
+                assistantMessageDiv.textContent = 'Error communicating with the server.';
+                eventSource.close();
+            };
+        });
+
+        function appendMessage(role, content) {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message', `${role}-message`);
+            messageDiv.textContent = content;
+            chatHistory.appendChild(messageDiv);
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+            return messageDiv;
+        }
+    </script>
+</body>
+</html>
