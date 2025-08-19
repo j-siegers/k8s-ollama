@@ -24,6 +24,6 @@ spec:
         - containerPort: 5000
         env:
         - name: OLLAMA_HOST
-          value: "http://ollama-service.ollama:11434"
+          value: "http://ollama-service:11434"
         - name: OLLAMA_MODEL
           value: "qwen3:0.6b"
