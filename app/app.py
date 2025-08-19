@@ -42,9 +42,9 @@ def chat():
                         if 'content' in json_line.get('message', {}):
                             yield f"data: {json.dumps(json_line)}\n\n"
                     except json.JSONDecodeError:
-                        print(f"Could not decode line: {decoded_line}")
+                        app.logger.warning(f"Could not decode line: {decoded_line}")
         except requests.exceptions.RequestException as e:
-            print(f"Error connecting to Ollama: {e}")
+            app.logger.error(f"Error connecting to Ollama: {e}")
             yield f"data: {json.dumps({'error': 'Could not connect to Ollama service.'})}\\n\n"
 
     return Response(generate(), mimetype="text/event-stream")
