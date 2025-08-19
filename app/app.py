@@ -6,7 +6,7 @@ import requests
 
 app = Flask(__name__)
 
-OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://ollama-service.ollama:11434")
+OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://ollama-service:11434")
 OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "qwen3:0.6b")
 
 @app.route("/")
