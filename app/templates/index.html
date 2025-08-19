@@ -31,39 +31,65 @@
 
             const assistantMessageDiv = appendMessage('assistant', '');
 
-            const eventSource = new EventSource("/chat", {
-                method: "POST",
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ messages })
-            });
+            try {
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ messages }),
+                });
 
-            let fullResponse = "";
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ error: `HTTP error! status: ${response.status}` }));
+                    throw new Error(errorData.error);
+                }
 
-            eventSource.onmessage = function(event) {
-                const data = JSON.parse(event.data);
-                if (data.error) {
-                    fullResponse = data.error;
-                    assistantMessageDiv.textContent = fullResponse;
-                    eventSource.close();
-                    return;
-                }
-                if (data.message && data.message.content) {
-                    fullResponse += data.message.content;
-                    assistantMessageDiv.textContent = fullResponse;
-                }
-                if (data.done) {
-                    eventSource.close();
-                    messages.push({ role: 'assistant', content: fullResponse });
-                }
-            };
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let fullResponse = '';
+                let buffer = '';
 
-            eventSource.onerror = function(err) {
-                console.error("EventSource failed:", err);
-                assistantMessageDiv.textContent = 'Error communicating with the server.';
-                eventSource.close();
-            };
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) {
+                        if (fullResponse) {
+                            messages.push({ role: 'assistant', content: fullResponse });
+                        }
+                        break;
+                    }
+                    
+                    buffer += decoder.decode(value, { stream: true });
+                    const parts = buffer.split('\n\n');
+                    
+                    for (let i = 0; i < parts.length - 1; i++) {
+                        const part = parts[i];
+                        if (part.startsWith('data: ')) {
+                            const jsonString = part.substring(6);
+                            if (jsonString) {
+                                try {
+                                    const data = JSON.parse(jsonString);
+                                    if (data.error) {
+                                        fullResponse = data.error;
+                                        assistantMessageDiv.textContent = fullResponse;
+                                        return; 
+                                    }
+                                    if (data.message && data.message.content) {
+                                        fullResponse += data.message.content;
+                                        assistantMessageDiv.textContent = fullResponse;
+                                    }
+                                } catch (e) {
+                                    console.error('Error parsing JSON:', e, 'in part:', jsonString);
+                                }
+                            }
+                        }
+                    }
+                    buffer = parts[parts.length - 1];
+                }
+            } catch (error) {
+                console.error('Fetch error:', error);
+                assistantMessageDiv.textContent = error.message || 'Error communicating with the server.';
+            }
         });
 
         function appendMessage(role, content) {
