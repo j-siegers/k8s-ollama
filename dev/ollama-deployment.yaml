@@ -15,6 +15,19 @@ spec:
       labels:
         app: ollama
     spec:
+      initContainers:
+        - name: ollama-pull
+          image: docker.io/ollama/ollama:latest
+          command:
+            - /bin/sh
+            - -c
+            - |
+              ollama serve &
+              sleep 15
+              ollama pull qwen3:0.6b
+          volumeMounts:
+            - name: ollama-data
+              mountPath: /root/.ollama
       containers:
         - name: ollama
           image: docker.io/ollama/ollama:latest
@@ -22,7 +35,7 @@ spec:
             - containerPort: 11434
           volumeMounts:
             - name: ollama-data
-              mountPath: /home/ollama/.ollama
+              mountPath: /root/.ollama
       volumes:
         - name: ollama-data
           persistentVolumeClaim:
