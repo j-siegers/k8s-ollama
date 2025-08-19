@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
       - name: flask-app
-        image: flask-ollama-chat:latest # Assumes you will build a docker image with this tag
+        image: flask-ollama-chat:latest
         imagePullPolicy: IfNotPresent # Important for local images
         ports:
         - containerPort: 5000
