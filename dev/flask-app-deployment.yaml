@@ -1,0 +1,29 @@
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flask-app-deployment
+  namespace: ollama
+  labels:
+    app: flask-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: flask-app
+  template:
+    metadata:
+      labels:
+        app: flask-app
+    spec:
+      containers:
+      - name: flask-app
+        image: flask-ollama-chat:latest # Assumes you will build a docker image with this tag
+        imagePullPolicy: IfNotPresent # Important for local images
+        ports:
+        - containerPort: 5000
+        env:
+        - name: OLLAMA_HOST
+          value: "http://ollama-service.ollama:11434"
+        - name: OLLAMA_MODEL
+          value: "qwen3:0.6b"
