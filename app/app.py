@@ -18,11 +18,19 @@ def chat():
     data = request.get_json()
     messages = data.get("messages", [])
 
+    # Add a system prompt to instruct the model to be direct.
+    # This can help prevent it from showing its internal reasoning.
+    system_prompt = {
+        "role": "system",
+        "content": "You are a helpful assistant. Please provide only the direct answer to the user's question without any of your internal reasoning or thought processes."
+    }
+    final_messages = [system_prompt] + messages
+
     def generate():
         try:
             response = requests.post(
                 f"{OLLAMA_HOST}/api/chat",
-                json={"model": OLLAMA_MODEL, "messages": messages, "stream": True},
+                json={"model": OLLAMA_MODEL, "messages": final_messages, "stream": True},
                 stream=True,
             )
             response.raise_for_status()

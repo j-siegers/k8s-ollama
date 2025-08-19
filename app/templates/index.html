@@ -9,6 +9,9 @@
 </head>
 <body>
     <div id="chat-container">
+        <header>
+            <h1>PodTalk</h1>
+        </header>
         <div id="chat-history"></div>
         <form id="chat-form">
             <input type="text" id="message-input" placeholder="Type your message..." autocomplete="off">
@@ -25,13 +28,15 @@
             const userInput = messageInput.value;
             if (!userInput) return;
 
-            appendMessage('user', userInput);
+            appendMessage('user', userInput, false);
             messages.push({ role: 'user', content: userInput });
             messageInput.value = '';
 
-            const assistantMessageDiv = appendMessage('assistant', '');
+            const loadingHTML = '<div class="loading-dots"><div></div><div></div><div></div></div>';
+            const assistantMessageDiv = appendMessage('assistant', loadingHTML, true);
 
             try {
+                let firstChunk = true;
                 const response = await fetch('/chat', {
                     method: 'POST',
                     headers: {
@@ -75,6 +80,10 @@
                                         return; 
                                     }
                                     if (data.message && data.message.content) {
+                                        if (firstChunk) {
+                                            assistantMessageDiv.innerHTML = ''; // Clear loading animation
+                                            firstChunk = false;
+                                        }
                                         fullResponse += data.message.content;
                                         assistantMessageDiv.textContent = fullResponse;
                                     }
@@ -92,10 +101,14 @@
             }
         });
 
-        function appendMessage(role, content) {
+        function appendMessage(role, content, isHtml = false) {
             const messageDiv = document.createElement('div');
             messageDiv.classList.add('message', `${role}-message`);
-            messageDiv.textContent = content;
+            if (isHtml) {
+                messageDiv.innerHTML = content;
+            } else {
+                messageDiv.textContent = content;
+            }
             chatHistory.appendChild(messageDiv);
             chatHistory.scrollTop = chatHistory.scrollHeight;
             return messageDiv;
