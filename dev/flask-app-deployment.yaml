@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
       - name: flask-app
-        image: flask-ollama-chat:latest
+        image: siegers/flask-ollama-chat:latest
         imagePullPolicy: IfNotPresent # Important for local images
         ports:
         - containerPort: 5000
