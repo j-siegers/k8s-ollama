@@ -2,7 +2,6 @@ import os
 import json
 from flask import Flask, render_template, request, Response
 import requests
-import re
 
 app = Flask(__name__)
 
@@ -35,19 +34,43 @@ def chat():
                 stream=True,
             )
             response.raise_for_status()
+
+            in_think_block = False
             for line in response.iter_lines():
-                if line:
-                    decoded_line = line.decode('utf-8')
-                    try:
-                        json_line = json.loads(decoded_line)
-                        content = json_line.get('message', {}).get('content', '')
-                        # Remove <think>...</think> tags
-                        filtered_content = re.sub(r'<think>.*?</think>', '', content, flags=re.DOTALL)
-                        json_line['message']['content'] = filtered_content
-                        if filtered_content.strip():
-                            yield f"data: {json.dumps(json_line)}\n\n"
-                    except json.JSONDecodeError:
-                        app.logger.warning(f"Could not decode line: {decoded_line}")
+                if not line:
+                    continue
+
+                decoded_line = line.decode('utf-8')
+                try:
+                    json_line = json.loads(decoded_line)
+                    chunk = json_line.get('message', {}).get('content', '')
+
+                    output_content = ""
+                    while chunk:
+                        if in_think_block:
+                            end_index = chunk.find('</think>')
+                            if end_index != -1:
+                                in_think_block = False
+                                chunk = chunk[end_index + len('</think>'):]
+                            else:
+                                # The rest of the chunk is inside the think block, discard it
+                                chunk = ""
+                        else:  # not in_think_block
+                            start_index = chunk.find('<think>')
+                            if start_index != -1:
+                                # Part before the tag is valid
+                                output_content += chunk[:start_index]
+                                in_think_block = True
+                                chunk = chunk[start_index + len('<think>'):]
+                            else:
+                                # No start tag, the whole chunk is valid
+                                output_content += chunk
+                                chunk = ""
+                    if output_content:
+                        json_line['message']['content'] = output_content
+                        yield f"data: {json.dumps(json_line)}\n\n"
+                except json.JSONDecodeError:
+                    app.logger.warning(f"Could not decode line: {decoded_line}")
         except requests.exceptions.RequestException as e:
             app.logger.error(f"Error connecting to Ollama: {e}")
             yield f"data: {json.dumps({'error': 'Could not connect to Ollama service.'})}\\n\n"
