@@ -1,8 +1,8 @@
-
 import os
 import json
 from flask import Flask, render_template, request, Response
 import requests
+import re
 
 app = Flask(__name__)
 
@@ -22,7 +22,8 @@ def chat():
     # This can help prevent it from showing its internal reasoning.
     system_prompt = {
         "role": "system",
-        "content": "You are a helpful assistant. Please provide only the direct answer to the user's question without any of your internal reasoning or thought processes."
+        "content": "You are a helpful assistant. Do not include any internal thoughts, "
+        "reasoning, or <think> tags in your answers. Only provide the direct answer to the user's question."
     }
     final_messages = [system_prompt] + messages
 
@@ -39,7 +40,11 @@ def chat():
                     decoded_line = line.decode('utf-8')
                     try:
                         json_line = json.loads(decoded_line)
-                        if 'content' in json_line.get('message', {}):
+                        content = json_line.get('message', {}).get('content', '')
+                        # Remove <think>...</think> tags
+                        filtered_content = re.sub(r'<think>.*?</think>', '', content, flags=re.DOTALL)
+                        json_line['message']['content'] = filtered_content
+                        if filtered_content.strip():
                             yield f"data: {json.dumps(json_line)}\n\n"
                     except json.JSONDecodeError:
                         app.logger.warning(f"Could not decode line: {decoded_line}")
