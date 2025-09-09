@@ -18,8 +18,7 @@ spec:
     spec:
       containers:
       - name: flask-app
-        image: siegers/flask-ollama-chat:1.25
-        imagePullPolicy: Always
+        image: "flask-app-image"
         ports:
         - containerPort: 5000
         env:
