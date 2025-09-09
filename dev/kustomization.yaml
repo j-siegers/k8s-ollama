@@ -3,7 +3,7 @@ kind: Kustomization
 resources:
 - "flask-app-deployment.yaml"
 images:
-- name: "flask-app-image"
-  newName: "siegers/flask-ollama-chat"
-  newTag: "initial"
-namespace: "ollama"
+- name: flask-app-image
+  newName: siegers/flask-ollama-chat
+  newTag: 9271da1
+namespace: ollama
